@@ -79,25 +79,95 @@ export interface ChainablePromiseElement extends
     AsyncElementProto,
     Omit<WebdriverIO.Element, keyof ChainablePromiseBaseElement | keyof AsyncElementProto> {}
 
+/**
+ * Asynchronous equivalents of the ES5 `Array` iteration methods, available on
+ * the element list returned by `$$`.
+ *
+ * Every method comes in two flavors: the base method runs its callbacks
+ * **concurrently**, while the `*Series` variant runs **one callback at a time**,
+ * in order. Prefer a `*Series` variant when the callback interacts with the
+ * browser and the order of those interactions matters.
+ */
 interface AsyncIterators<T> {
     /**
-     * Unwrap the nth element of the element list.
+     * Executes the callback once for each element, running the callbacks concurrently.
      */
     forEach: <T>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => unknown, thisArg?: T) => Promise<void>
+    /**
+     * Same as `forEach`, but runs only one callback at a time.
+     */
     forEachSeries: <T>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => unknown, thisArg?: T) => Promise<void>
+    /**
+     * Creates a new array with the result of the callback for each element, running
+     * the callbacks concurrently. The result always has the same length as the
+     * element list.
+     */
     map: <U>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => U | Promise<U>, thisArg?: T) => Promise<U[]>
+    /**
+     * Same as `map`, but runs only one callback at a time.
+     */
     mapSeries: <T, U>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => U | Promise<U>, thisArg?: T) => Promise<U[]>;
+    /**
+     * Returns the first element that satisfies the callback, running the callbacks
+     * concurrently, or `undefined` if none does. "First" means the first match to
+     * resolve, which is not necessarily the earliest element in the list, and every
+     * callback still runs even once a match is found. Use `findSeries` if either
+     * matters.
+     */
     find: <T>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => boolean | Promise<boolean>, thisArg?: T) => Promise<T>;
+    /**
+     * Same as `find`, but runs only one callback at a time, so the first match in
+     * list order is returned.
+     */
     findSeries: <T>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => boolean | Promise<boolean>, thisArg?: T) => Promise<T>;
+    /**
+     * Returns the index of the first element that satisfies the callback, running
+     * the callbacks concurrently, or `-1` if none does. "First" means the first
+     * match to resolve, which is not necessarily the earliest element in the list,
+     * and every callback still runs even once a match is found. Use
+     * `findIndexSeries` if either matters.
+     */
     findIndex: <T>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => boolean | Promise<boolean>, thisArg?: T) => Promise<number>;
+    /**
+     * Same as `findIndex`, but runs only one callback at a time.
+     */
     findIndexSeries: <T>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => boolean | Promise<boolean>, thisArg?: T) => Promise<number>;
+    /**
+     * Resolves to `true` if at least one element satisfies the callback, running
+     * the callbacks concurrently.
+     */
     some: <T>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => boolean | Promise<boolean>, thisArg?: T) => Promise<boolean>;
+    /**
+     * Same as `some`, but runs only one callback at a time.
+     */
     someSeries: <T>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => boolean | Promise<boolean>, thisArg?: T) => Promise<boolean>;
+    /**
+     * Resolves to `true` if every element satisfies the callback, running the
+     * callbacks concurrently.
+     */
     every: <T>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => boolean | Promise<boolean>, thisArg?: T) => Promise<boolean>;
+    /**
+     * Same as `every`, but runs only one callback at a time.
+     */
     everySeries: <T>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => boolean | Promise<boolean>, thisArg?: T) => Promise<boolean>;
+    /**
+     * Creates a new array with the elements that satisfy the callback, running the
+     * callbacks concurrently.
+     */
     filter: <T>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => boolean | Promise<boolean>, thisArg?: T) => Promise<WebdriverIO.Element[]>;
+    /**
+     * Same as `filter`, but runs only one callback at a time.
+     */
     filterSeries: <T>(callback: (currentValue: WebdriverIO.Element, index: number, array: T[]) => boolean | Promise<boolean>, thisArg?: T) => Promise<WebdriverIO.Element[]>;
+    /**
+     * Reduces the element list to a single value, awaiting the accumulator between
+     * elements. Always runs one callback at a time, since each call depends on the
+     * previous result.
+     */
     reduce: <T, U>(callback: (accumulator: U, currentValue: WebdriverIO.Element, currentIndex: number, array: T[]) => U | Promise<U>, initialValue?: U) => Promise<U>;
+    /**
+     * Returns an async iterator over `[index, element]` pairs.
+     */
     entries(): AsyncIterableIterator<[number, WebdriverIO.Element]>;
 }
 
@@ -147,6 +217,7 @@ type ElementCommandNames = SingleElementCommandNames | MultiElementCommandNames
 type MultiRemoteElementCommands = {
     [K in keyof Pick<BrowserCommandsType, SingleElementCommandNames>]: (...args: Parameters<BrowserCommandsType[K]>) => ThenArg<WebdriverIO.MultiRemoteElement>
 } & {
+    // TODO change MultiRemoteElement[] for a MultiRemoteElementArray type in v10
     [K in keyof Pick<BrowserCommandsType, MultiElementCommandNames>]: (...args: Parameters<BrowserCommandsType[K]>) => ThenArg<WebdriverIO.MultiRemoteElement[]>
 }
 
@@ -425,6 +496,12 @@ interface MultiRemoteBase extends Omit<InstanceBase, 'sessionId'>, CustomInstanc
      * get a specific instance to run commands on it
      */
     getInstance: (browserName: string) => WebdriverIO.Browser
+
+    /**
+     * @experimental select one or multiple multi-remote browsers to run commands on them
+     */
+    unstable_select: (browserNames: string | string[]) => WebdriverIO.MultiRemoteBrowser
+
 }
 interface MultiRemoteElementBase {
     selector: string
@@ -443,6 +520,15 @@ interface MultiRemoteElementBase {
      * get a specific instance to run commands on it
      */
     getInstance: (browserName: string) => WebdriverIO.Element
+    /**
+     * @experimental select one or multiple multi-remote element to run commands on them
+     */
+    unstable_select: (browserNames: string | string[]) => WebdriverIO.MultiRemoteElement
+    /**
+     * @experimental filter multi-remote element to run commands on them
+     * $$('elements').filter((element) => await element.isDisplayed()) // returns a MultiRemoteElement with only the displayed elements
+     */
+    unstable_filter: (predicate: (element: WebdriverIO.Element) => Promise<boolean> | boolean) => Promise<WebdriverIO.MultiRemoteElement>
     // @private
     __propertiesObject__: never
 }

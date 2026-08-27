@@ -206,13 +206,16 @@ export class AllureReportState {
     }
 
     private _addTestInfo(message: WDIOTestInfoMessage): void {
-        const { fullName } = message.data
+        const { fullName, titlePath } = message.data
         const testUuid = last(this._executablesStack)
         if (!testUuid) {
             return
         }
         this.allureRuntime.updateTest(testUuid, (r) => {
             r.fullName = fullName
+            if (Array.isArray(titlePath) && titlePath.length > 0) {
+                r.titlePath = titlePath
+            }
         })
     }
 
@@ -388,6 +391,15 @@ export class AllureReportState {
 
             default:
                 break
+            }
+
+            if (
+                message.type === 'global_error' ||
+                message.type === 'global_attachment_content' ||
+                message.type === 'global_attachment_path'
+            ) {
+                this.allureRuntime.applyRuntimeMessages('', [message])
+                continue
             }
 
             const hookUuid = this._fixturesStack.at(-1)
