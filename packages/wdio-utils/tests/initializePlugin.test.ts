@@ -39,8 +39,8 @@ describe('initializePlugin', () => {
         expect(service.foo).toBe('foo')
     })
 
-    it('should allow to load the service specified by an absolute path containing spaces', async ()=>{
-        const servicePath = path.resolve(__dirname, 'foo service.js')
+    it('should allow to load the service specified by an absolute path', async ()=>{
+        const servicePath = path.resolve(__dirname, 'foo-service.js')
         vi.mocked(resolve).mockImplementation(
             createMockResolver(pathToFileURL(servicePath).href, 'foo-service.js')
         )
