@@ -14,18 +14,16 @@ export default async function mergeResults(
     filePattern: string | RegExp = process.argv[3],
     customFileName: string = process.argv[4]
 ) {
-    const doesDirExist = fs.access(dir).then(() => true, () => false)
+    const doesDirExist = await fs.access(dir).then(() => true, () => false)
     if (!doesDirExist) {
         throw new Error(`Directory "${dir}" does not exist.`)
     }
     const rawData = await getDataFromFiles(dir, filePattern)
     const mergedResults = mergeData(rawData)
 
-    if (customFileName) {
-        const fileName = customFileName || DEFAULT_FILENAME
-        const filePath = path.join(dir, fileName)
-        await fs.writeFile(filePath, JSON.stringify(mergedResults))
-    }
+    const fileName = customFileName || DEFAULT_FILENAME
+    const filePath = path.join(dir, fileName)
+    await fs.writeFile(filePath, JSON.stringify(mergedResults))
 
     return mergedResults
 }
@@ -50,11 +48,9 @@ async function getDataFromFiles (dir: string, filePattern: string | RegExp) {
     }
 
     const fileNames = (await fs.readdir(dir)).filter((file) => file.match(safePattern))
-    const data: unknown[] = []
-
-    await Promise.all(fileNames.map(async (fileName) => {
-        data.push(JSON.parse((await fs.readFile(`${dir}/${fileName}`)).toString()))
-    }))
+    const data = await Promise.all(fileNames.map(async (fileName) =>
+        JSON.parse(await fs.readFile(path.join(dir, fileName), 'utf8'))
+    ))
 
     return data as ResultSet[]
 }
