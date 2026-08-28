@@ -1,6 +1,7 @@
 import type { Services } from '@wdio/types'
+import { pathToFileURL } from 'node:url'
 
-import { safeImport, isAbsolute, REG_EXP_WINDOWS_ABS_PATH, SLASH } from './utils.js'
+import { safeImport, isAbsolute } from './utils.js'
 
 const FILE_PROTOCOL = 'file://'
 
@@ -55,15 +56,5 @@ function ensureFileURL(path:string) {
         return path
     }
 
-    // Windows drive path
-    if (REG_EXP_WINDOWS_ABS_PATH.test(path)) {
-        return `${FILE_PROTOCOL}/${path.replace(/\\/g, '/')}`
-    }
-
-    // Unix absolute path
-    if (path.startsWith(SLASH)) {
-        return `${FILE_PROTOCOL}${path}`
-    }
-
-    return path
+    return pathToFileURL(path).href
 }
